@@ -11,7 +11,7 @@ from tesla_stores import TeslaStore
 
 # Define constants
 CLIENT_ID = 'ownerapi'
-REDIRECT_URI = 'https://auth.tesla.com/void/callback'
+REDIRECT_URI = 'tesla://auth/callback'
 AUTH_URL = 'https://auth.tesla.com/oauth2/v3/authorize'
 TOKEN_URL = 'https://auth.tesla.com/oauth2/v3/token'
 SCOPE = 'openid email offline_access'
@@ -44,7 +44,8 @@ def get_auth_code():
     auth_url = f"{AUTH_URL}?{urllib.parse.urlencode(auth_params)}"
     print(color_text("> Opening the browser for authentication:", '94'), auth_url)
     webbrowser.open(auth_url)
-    print(color_text("After authentication, you’ll be redirected to a new URL. The page might show a 'Page Not Found' error message, but the URL itself is still valid for this purpose.", '90'))
+    print(color_text("After logging in, the browser will try to redirect to a 'tesla://' URL which it cannot open.", '90'))
+    print(color_text("Open your browser's Developer Tools (F12) → Network tab, find the redirect request, and copy the full 'tesla://auth/callback?code=...' URL from there.", '90'))
     redirected_url = input(color_text("Please enter the redirected URL here: ", '93'))
     parsed_url = urllib.parse.urlparse(redirected_url)
     return urllib.parse.parse_qs(parsed_url.query).get('code')[0]
