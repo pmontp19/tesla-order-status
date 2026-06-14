@@ -4,10 +4,12 @@ To run the script, you need to install python3 for your operating system.
 
 https://www.python.org/downloads/
 
-Then you need to install the `requests` library by running:
+Then you need to install the required libraries by running:
 ```sh
-pip install requests
+pip install -r requirements.txt
 ```
+
+> **Note:** `curl_cffi` is required, not optional. Tesla's auth endpoint fingerprints the TLS handshake of the token request; a plain `requests`/OpenSSL handshake yields an access token that `owner-api` rejects with `403 forbidden`. `curl_cffi` replays a real browser's TLS fingerprint so the token is accepted.
 
 Optional: Copy the script to a new directory, the script asks to save the tokens and order details in the current directory for reusing the tokens and for comparing the data with the last time you fetched the order details.
 

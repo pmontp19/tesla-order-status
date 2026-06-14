@@ -7,6 +7,10 @@ import requests
 import webbrowser
 import urllib.parse
 
+# Tesla's auth edge (Akamai) fingerprints the TLS handshake of the token request.
+from curl_cffi import requests as tls_requests
+TLS_IMPERSONATE = 'chrome'
+
 from tesla_stores import TeslaStore
 
 # Define constants
@@ -59,7 +63,7 @@ def exchange_code_for_tokens(auth_code):
         'redirect_uri': REDIRECT_URI,
         'code_verifier': code_verifier,
     }
-    response = requests.post(TOKEN_URL, data=token_data)
+    response = tls_requests.post(TOKEN_URL, data=token_data, impersonate=TLS_IMPERSONATE)
     response.raise_for_status()
     return response.json()
 
@@ -86,7 +90,7 @@ def refresh_tokens(refresh_token):
         'client_id': CLIENT_ID,
         'refresh_token': refresh_token,
     }
-    response = requests.post(TOKEN_URL, data=token_data)
+    response = tls_requests.post(TOKEN_URL, data=token_data, impersonate=TLS_IMPERSONATE)
     response.raise_for_status()
     return response.json()
 
