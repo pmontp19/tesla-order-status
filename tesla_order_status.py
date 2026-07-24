@@ -25,17 +25,19 @@ TOKEN_FILE = 'tesla_tokens.json'
 ORDERS_FILE = 'tesla_orders.json'
 APP_VERSION = '9.99.9-9999' # we can use a dummy version here, as the API does not check it strictly
 
-# Option-code dictionary (verified against the community Tesla option-codes list;
-# Highland-only codes IBB4/W38C/MT367 are inferred from documented relatives).
+# Option-code dictionary (verified against the community Tesla option-codes list).
+# Highland codes IBB4/W38C/MT367 confirmed by the owner: Model 3 Standard RWD (base),
+# 18" wheels and all-black interior (the standard/base configuration).
 OPTION_CODES = {
     'MDL3': 'Model 3',
-    'MT367': 'Model 3 RWD - Highland (inferit)',
+    'm3': 'Model 3',
+    'MT367': 'Model 3 Standard RWD (base)',
     'PPSW': 'Blanc Perla multicapa (pintura)',
-    'W38C': 'Rodes 18" Highland (familia Photon/Aero, inferit)',
-    'IBB4': 'Interior tot negre (Highland, inferit)',
-    'APBS': 'Autopilot (inclus)',
+    'W38C': 'Rodes 18" (sèrie, Highland)',
+    'IBB4': 'Interior tot negre (sèrie)',
+    'APBS': 'Autopilot (inclòs)',
     'SC04': 'Supercharging Pay Per Use',
-    'CPF0': 'Connectivitat estandard (1 mes)',
+    'CPF0': 'Connectivitat estàndard (1 mes)',
     'CPF1': 'Connectivitat premium (1 any)',
     'MT300': 'Model 3 Standard Range RWD',
     'MT301': 'Model 3 Standard Range Plus RWD',
@@ -282,31 +284,31 @@ for detailed_order in detailed_new_orders:
     print(f"{'-'*55}")
 
     print(f"{color_text('Comanda:', '94')}")
-    print(f"{color_text('  Referencia:', '94')} {order['referenceNumber']}")
+    print(f"{color_text('  Referència:', '94')} {order['referenceNumber']}")
     print(f"{color_text('  Estat:', '94')} {order['orderStatus']} ({order.get('orderSubstatus', '?')})")
     print(f"{color_text('  Model:', '94')} {OPTION_CODES.get(order.get('modelCode'), order.get('modelCode', 'N/A'))}")
     print(f"{color_text('  VIN:', '94')} {order.get('vin', 'N/A')}")
 
-    print(f"\n{color_text('Configuracio (opcions decodificades):', '94')}")
+    print(f"\n{color_text('Configuració (opcions decodificades):', '94')}")
     for opt in decode_options(order.get('mktOptions')):
         print(f"{color_text('  -', '94')} {opt}")
 
     print(f"\n{color_text('Lliurament:', '94')}")
-    print(f"{color_text('  Ubicacio:', '94')} {g(scheduling, 'deliveryAddressTitle')}")
+    print(f"{color_text('  Ubicació:', '94')} {g(scheduling, 'deliveryAddressTitle')}")
     print(f"{color_text('  Tipus:', '94')} {g(scheduling, 'deliveryType')}")
     print(f"{color_text('  Finestra:', '94')} {g(scheduling, 'deliveryWindowDisplay')}")
     print(f"{color_text('  Cita:', '94')} {g(scheduling, 'apptDateTimeAddressStr', default='Encara no assignada')}")
     print(f"{color_text('  ETA al centre:', '94')} {g(tasks, 'finalPayment', 'data', 'etaToDeliveryCenter', default='N/A')}")
     sched_url = g(scheduling, 'selfSchedulingUrl')
     sched_avail = 'Si' if scheduling.get('isSelfSchedulingAvailable') else 'No'
-    print(f"{color_text('  Autoprogramacio:', '94')} {sched_avail}  {sched_url if sched_url != 'N/A' else ''}")
+    print(f"{color_text('  Autoprogramació:', '94')} {sched_avail}  {sched_url if sched_url != 'N/A' else ''}")
 
     print(f"\n{color_text('Registre i finançament:', '94')}")
     print(f"{color_text('  Titular:', '94')} {owner}")
     print(f"{color_text('  Inici registre:', '94')} {g(reg_data, 'startedOn')} ({g(reg_data, 'startedBy')})")
     print(f"{color_text('  Tesla registra:', '94')} {g(reg_data, 'regDetails', 'isTeslaRegister')}")
     print(f"{color_text('  Tipus comanda:', '94')} {g(registration, 'orderType')}")
-    print(f"{color_text('  Finançament:', '94')} {'confimat' if financing.get('financeIntent') else 'no'} ({g(financing, 'status', default='?')})")
+    print(f"{color_text('  Finançament:', '94')} {'confirmat' if financing.get('financeIntent') else 'no'} ({g(financing, 'status', default='?')})")
     print(f"{color_text('  Trade-in:', '94')} {g(trade_in, 'tradeInIntent')}")
 
     print(f"\n{color_text('Pagament final:', '94')}")
