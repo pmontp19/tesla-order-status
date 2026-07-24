@@ -25,6 +25,41 @@ TOKEN_FILE = 'tesla_tokens.json'
 ORDERS_FILE = 'tesla_orders.json'
 APP_VERSION = '9.99.9-9999' # we can use a dummy version here, as the API does not check it strictly
 
+# Option-code dictionary (verified against the community Tesla option-codes list;
+# Highland-only codes IBB4/W38C/MT367 are inferred from documented relatives).
+OPTION_CODES = {
+    'MDL3': 'Model 3',
+    'MT367': 'Model 3 RWD - Highland (inferit)',
+    'PPSW': 'Blanc Perla multicapa (pintura)',
+    'W38C': 'Rodes 18" Highland (familia Photon/Aero, inferit)',
+    'IBB4': 'Interior tot negre (Highland, inferit)',
+    'APBS': 'Autopilot (inclus)',
+    'SC04': 'Supercharging Pay Per Use',
+    'CPF0': 'Connectivitat estandard (1 mes)',
+    'CPF1': 'Connectivitat premium (1 any)',
+    'MT300': 'Model 3 Standard Range RWD',
+    'MT301': 'Model 3 Standard Range Plus RWD',
+    'MT302': 'Model 3 Long Range RWD',
+    'MT303': 'Model 3 Long Range AWD',
+    'MT304': 'Model 3 Long Range AWD Performance',
+    'IBB1': 'Interior tot negre',
+    'IBW1': 'Interior blanc i negre',
+    'W38A': 'Rodes 18" Photon (Highland)',
+    'W39S': 'Rodes 19" Nova (Highland)',
+    'W32P': 'Rodes 20" Performance',
+    'DV2W': 'Traccio darrera (RWD)',
+    'DV4W': 'Traccio total (AWD)',
+}
+
+def decode_options(mkt):
+    decoded = []
+    for code in (mkt or '').split(','):
+        code = code.strip()
+        if not code:
+            continue
+        decoded.append(OPTION_CODES.get(code, f'{code} (codi desconegut)'))
+    return decoded
+
 def color_text(text, color_code):
     return f"\033[{color_code}m{text}\033[0m"
 
@@ -105,7 +140,7 @@ def retrieve_orders(access_token):
 
 def get_order_details(order_id, access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
-    api_url = f'https://akamai-apigateway-vfx.tesla.com/tasks?deviceLanguage=en&deviceCountry=DE&referenceNumber={order_id}&appVersion={APP_VERSION}'
+    api_url = f'https://akamai-apigateway-vfx.tesla.com/tasks?deviceLanguage=es&deviceCountry=ES&referenceNumber={order_id}&appVersion={APP_VERSION}'
     response = requests.get(api_url, headers=headers)
     response.raise_for_status()
     return response.json()
@@ -218,32 +253,72 @@ else:
 for detailed_order in detailed_new_orders:
     order = detailed_order['order']
     order_details = detailed_order['details']
-    scheduling = order_details.get('tasks', {}).get('scheduling', {})
-    order_info = order_details.get('tasks', {}).get('registration', {}).get('orderDetails', {})
-    final_payment_data = order_details.get('tasks', {}).get('finalPayment', {}).get('data', {})
+    tasks = order_details.get('tasks', {})
+    scheduling = tasks.get('scheduling', {})
+    registration = tasks.get('registration', {})
+    reg_data = registration.get('regData', {})
+    final_payment = tasks.get('finalPayment', {})
+    delivery_acceptance = tasks.get('deliveryAcceptance', {})
+    financing = tasks.get('financing', {})
+    trade_in = tasks.get('tradeIn', {})
 
-    print(f"\n{'-'*45}")
-    print(f"{'ORDER INFORMATION':^45}")
-    print(f"{'-'*45}")
+    def g(d, *keys, default='N/A'):
+        cur = d
+        for k in keys:
+            if not isinstance(cur, dict):
+                return default
+            cur = cur.get(k)
+            if cur is None or cur == '':
+                return default
+        return cur
 
-    print(f"{color_text('Order Details:', '94')}")
-    print(f"{color_text('- Order ID:', '94')} {order['referenceNumber']}")
-    print(f"{color_text('- Status:', '94')} {order['orderStatus']}")
-    print(f"{color_text('- Model:', '94')} {order['modelCode']}")
-    print(f"{color_text('- VIN:', '94')} {order.get('vin', 'N/A')}")
-    
-    print(f"\n{color_text('Reservation Details:', '94')}")
-    print(f"{color_text('- Reservation Date:', '94')} {order_info.get('reservationDate', 'N/A')}")
-    print(f"{color_text('- Order Booked Date:', '94')} {order_info.get('orderBookedDate', 'N/A')}")
+    owner = f"{g(reg_data, 'owner', 'user', 'firstName')} {g(reg_data, 'owner', 'user', 'lastName')}"
+    currency = g(final_payment, 'currencyFormat', 'currencyCode', default='EUR')
+    amount_due = g(final_payment, 'amountDue')
+    amount_sent = g(final_payment, 'amountSent')
 
-    print(f"\n{color_text('Vehicle Status:', '94')}")
-    print(f"{color_text('- Vehicle Odometer:', '94')} {order_info.get('vehicleOdometer', 'N/A')} {order_info.get('vehicleOdometerType', 'N/A')}")
+    print(f"\n{'-'*55}")
+    print(f"{'ORDER INFORMATION':^55}")
+    print(f"{'-'*55}")
 
-    print(f"\n{color_text('Delivery Information:', '94')}")
-    print(f"{color_text('- Routing Location:', '94')} {order_info.get('vehicleRoutingLocation', 'N/A')} ({TeslaStore(order_info.get('vehicleRoutingLocation', 0)).label})")
-    print(f"{color_text('- Delivery Window:', '94')} {scheduling.get('deliveryWindowDisplay', 'N/A')}")
-    print(f"{color_text('- ETA to Delivery Center:', '94')} {final_payment_data.get('etaToDeliveryCenter', 'N/A')}")
-    print(f"{color_text('- Delivery Appointment:', '94')} {scheduling.get('apptDateTimeAddressStr', 'N/A')}")
+    print(f"{color_text('Comanda:', '94')}")
+    print(f"{color_text('  Referencia:', '94')} {order['referenceNumber']}")
+    print(f"{color_text('  Estat:', '94')} {order['orderStatus']} ({order.get('orderSubstatus', '?')})")
+    print(f"{color_text('  Model:', '94')} {OPTION_CODES.get(order.get('modelCode'), order.get('modelCode', 'N/A'))}")
+    print(f"{color_text('  VIN:', '94')} {order.get('vin', 'N/A')}")
 
-    print(f"{'-'*45}\n")
+    print(f"\n{color_text('Configuracio (opcions decodificades):', '94')}")
+    for opt in decode_options(order.get('mktOptions')):
+        print(f"{color_text('  -', '94')} {opt}")
+
+    print(f"\n{color_text('Lliurament:', '94')}")
+    print(f"{color_text('  Ubicacio:', '94')} {g(scheduling, 'deliveryAddressTitle')}")
+    print(f"{color_text('  Tipus:', '94')} {g(scheduling, 'deliveryType')}")
+    print(f"{color_text('  Finestra:', '94')} {g(scheduling, 'deliveryWindowDisplay')}")
+    print(f"{color_text('  Cita:', '94')} {g(scheduling, 'apptDateTimeAddressStr', default='Encara no assignada')}")
+    print(f"{color_text('  ETA al centre:', '94')} {g(tasks, 'finalPayment', 'data', 'etaToDeliveryCenter', default='N/A')}")
+    sched_url = g(scheduling, 'selfSchedulingUrl')
+    sched_avail = 'Si' if scheduling.get('isSelfSchedulingAvailable') else 'No'
+    print(f"{color_text('  Autoprogramacio:', '94')} {sched_avail}  {sched_url if sched_url != 'N/A' else ''}")
+
+    print(f"\n{color_text('Registre i finançament:', '94')}")
+    print(f"{color_text('  Titular:', '94')} {owner}")
+    print(f"{color_text('  Inici registre:', '94')} {g(reg_data, 'startedOn')} ({g(reg_data, 'startedBy')})")
+    print(f"{color_text('  Tesla registra:', '94')} {g(reg_data, 'regDetails', 'isTeslaRegister')}")
+    print(f"{color_text('  Tipus comanda:', '94')} {g(registration, 'orderType')}")
+    print(f"{color_text('  Finançament:', '94')} {'confimat' if financing.get('financeIntent') else 'no'} ({g(financing, 'status', default='?')})")
+    print(f"{color_text('  Trade-in:', '94')} {g(trade_in, 'tradeInIntent')}")
+
+    print(f"\n{color_text('Pagament final:', '94')}")
+    print(f"{color_text('  Pendent:', '94')} {amount_due} {currency}  (pagat: {amount_sent})")
+    print(f"{color_text('  Estat:', '94')} {g(final_payment, 'status')} ({'disponible' if final_payment.get('enabled') else 'pendent'})")
+
+    print(f"\n{color_text('Estat de les tasques:', '94')}")
+    for task_id in ['deliveryDetails', 'tradeIn', 'financing', 'registration', 'scheduling', 'finalPayment', 'deliveryAcceptance']:
+        t = tasks.get(task_id, {})
+        done = 'feta' if t.get('complete') else 'pendent'
+        card = t.get('card', {}).get('title', '')
+        print(f"{color_text('  - ' + task_id + ':', '94')} {done}" + (f"  ({card})" if card else ""))
+
+    print(f"{'-'*55}\n")
 
